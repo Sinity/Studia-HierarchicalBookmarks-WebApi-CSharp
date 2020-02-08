@@ -1,6 +1,7 @@
 ﻿using BookmarksApp.Infrastructure;
 using BookmarksApp.Messages.Requests;
 using BookmarksApp.Messages.Responses;
+using BookmarksApp.Models;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
@@ -12,61 +13,53 @@ namespace BookmarksApp.Controllers {
     [Route("api/[controller]")]
     [ApiController]
     public class BookmarksController : ControllerBase {
-        private readonly DatabaseRepository _repository;
-        public BookmarksController(DatabaseRepository repository) {
-            _repository = repository;
-        }
+        private readonly DatabaseRepository DB;
+        public BookmarksController(DatabaseRepository db) =>
+            DB = db;
 
         [HttpGet]
-        public ActionResult<ICollection<BookmarkResponse>> Get([FromQuery] string tags, [FromQuery] string sort) {
-            return _repository
-                .GetBookmarksData()
-                .Select(x => new BookmarkResponse(x.Id, x.URL, x.CreatedOn, x.Tags))
-                .ToArray();
+        public ActionResult<ICollection<Bookmark>> Get([FromQuery] string tags, [FromQuery] string sort) {
+            return DB.GetBookmarksData().ToArray();
         }
 
+        [HttpGet("{id:guid}")]
+        public ActionResult<Bookmark> Get(Guid id) =>
+            (ActionResult<Bookmark>)DB.GetBookmarksData().First(x => x.Id == id) ?? NotFound();
+
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        public async Task<ActionResult<Guid>> Post([FromBody] CreateBookmarkRequest bookmarkRequest) {
+        public async Task<ActionResult<Guid>> Post([FromBody] BookmarkRequest bookmarkRequest) {
             var bookmark = new BookmarksApp.Models.Bookmark (
                 Guid.NewGuid(),
                 bookmarkRequest.URL,
                 DateTime.Now,
-                _repository.GetTagsData().Where(x => bookmarkRequest.Tags.Contains(x.Id)).ToArray()
+                DB.GetTagsData().Where(x => bookmarkRequest.Tags.Contains(x.Id)).ToArray()
             );
 
-            await _repository.Insert(bookmark);
+            await DB.Insert(bookmark);
             return Ok(bookmark.Id);
         }
 
         [HttpPut("{id:guid}")]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.NotFound)]
-        public async Task<ActionResult> Put(Guid id, [FromBody] CreateBookmarkRequest bookmarkRequest) {
-            var bookmark = _repository
-                .GetBookmarksData()
-                .FirstOrDefault(x => x.Id == id);
-
+        public async Task<ActionResult> Put(Guid id, [FromBody] BookmarkRequest bookmarkRequest) {
+            var bookmark = DB.GetBookmarksData().FirstOrDefault(x => x.Id == id);
             if (bookmark == null)
                 return NotFound();
 
             bookmark.URL = bookmarkRequest.URL;
-            bookmark.Tags = _repository.GetTagsData().Where(x => bookmarkRequest.Tags.Contains(x.Id)).ToArray();
+            bookmark.Tags = DB.GetTagsData().Where(x => bookmarkRequest.Tags.Contains(x.Id)).ToArray();
 
-            await _repository.Update(x => x.Id == id, bookmark);
+            await DB.Update(x => x.Id == id, bookmark);
             return Ok();
         }
 
         [HttpDelete("{id:guid}")]
         public async Task<ActionResult> Delete(Guid id) {
-            var bookmark = _repository
-                .GetBookmarksData()
-                .FirstOrDefault(x => x.Id == id);
+            var bookmark = DB.GetBookmarksData().FirstOrDefault(x => x.Id == id);
 
             if (bookmark == null)
                 return NotFound();
 
-            await _repository.Delete<BookmarksApp.Models.Bookmark>(x => x.Id == id);
+            await DB.Delete<BookmarksApp.Models.Bookmark>(x => x.Id == id);
             return Ok();
         }
     }

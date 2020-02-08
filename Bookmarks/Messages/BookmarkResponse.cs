@@ -9,9 +9,9 @@ namespace BookmarksApp.Messages.Responses {
         public DateTime CreatedOn { get; }
         public ICollection<Tag> Tags { get; set; }
 
-        public BookmarkResponse(Guid id, string URL, DateTime createdOn, ICollection<Tag> tags = null) {
+        public BookmarkResponse(Guid id, string url, DateTime createdOn, ICollection<Tag> tags = null) {
             Id = id;
-            this.URL = URL;
+            URL = url;
             CreatedOn = createdOn;
             Tags = tags ?? new List<Tag>();
         }

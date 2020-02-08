@@ -15,7 +15,7 @@ namespace BookmarksApp.Messages.Responses {
         }
 
         public void LoadChildren(IQueryable<Tag> tags) {
-            Children = tags.Where(tag => tag.Parent.Id == Id).Select(tag => new TagNodeResponse(tag.Id, tag.Name)).ToArray();
+            Children = tags.Where(tag => tag.Parents.Any(parent => parent.Id == Id)).Select(tag => new TagNodeResponse(tag.Id, tag.Name)).ToArray();
             foreach (var child in Children)
                 child.LoadChildren(tags);
         }

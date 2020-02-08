@@ -10,13 +10,13 @@ using MongoDB.Driver;
 
 namespace BookmarksApp.Infrastructure {
     public class DatabaseRepository {
-        private readonly IMongoDatabase _database;
+        private readonly IMongoDatabase DB;
 
         public DatabaseRepository(IOptions<Settings> settingsOptions) {
             MongoDefaults.GuidRepresentation = MongoDB.Bson.GuidRepresentation.Standard;
 
             var client = new MongoClient(settingsOptions.Value.MongoDbConnection);
-            _database = client.GetDatabase(settingsOptions.Value.MongoDatabaseName);
+            DB = client.GetDatabase(settingsOptions.Value.MongoDatabaseName);
 
             BsonClassMap.RegisterClassMap<Bookmark>(x => {
                 x.AutoMap();
@@ -32,7 +32,7 @@ namespace BookmarksApp.Infrastructure {
         }
 
         private IMongoCollection<T> GetCollection<T>() {
-            return _database.GetCollection<T>(typeof(T).Name);
+            return DB.GetCollection<T>(typeof(T).Name);
         }
 
         public IQueryable<BookmarksApp.Models.Bookmark> GetBookmarksData() {

@@ -12,24 +12,25 @@ using System.Threading.Tasks;
 namespace BookmarksApp.Controllers {
     [Route("api/[controller]")]
     public class TagsController : ControllerBase {
-        private readonly DatabaseRepository _repository;
-        public TagsController(DatabaseRepository repository) {
-            _repository = repository;
-        }
+        private readonly DatabaseRepository DB;
+        public TagsController(DatabaseRepository db) =>
+            DB = db;
 
         [HttpGet]
         public ActionResult<ICollection<TagNodeResponse>> Get() {
-            var tags = _repository.GetTagsData();
-            var top = tags.Where(tag => tag.Parent == default).Select(tag => new TagNodeResponse(tag.Id, tag.Name)).ToArray();
+            var tags = DB.GetTagsData();
+            var top = tags.Where(tag => tag.Parents.Count == 0).Select(tag => new TagNodeResponse(tag.Id, tag.Name)).ToList();
             foreach (var tag in top)
                 tag.LoadChildren(tags);
             return top;
         }
 
+        [HttpGet("{id:guid}")]
+        public ActionResult<Tag> Get(Guid id) =>
+            (ActionResult<Tag>)DB.GetTagsData().First(x => x.Id == id) ?? NotFound();
+
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        public async Task<ActionResult<String>> Post([FromBody] CreateTagRequest request) {
+        public async Task<ActionResult<String>> Post([FromBody] TagRequest request) {
             if (!ModelState.IsValid) {
                 return BadRequest(ModelState);
             }
@@ -37,56 +38,38 @@ namespace BookmarksApp.Controllers {
             var tag = new Tag (
                 Guid.NewGuid(),
                 request.Name,
-                _repository.GetTagsData().FirstOrDefault(x => x.Id == request.Parent)
+                DB.GetTagsData().Where(x => request.Parents.Contains(x.Id)).ToArray()
             );
 
-            await _repository.Insert(tag);
+            await DB.Insert(tag);
             return Ok(tag.Id);
         }
 
         [HttpPut("{id:guid}")]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.NotFound)]
-        public async Task<ActionResult> Put(Guid id, [FromBody] CreateTagRequest request) {
-            var tag = _repository
-                .GetTagsData()
-                .FirstOrDefault(x => x.Id == id);
-
+        public async Task<ActionResult> Put(Guid id, [FromBody] TagRequest request) {
+            var tag = DB.GetTagsData().FirstOrDefault(x => x.Id == id);
             if (tag == null)
                 return NotFound();
 
             tag.Name = request.Name;
-            tag.Parent = _repository.GetTagsData().FirstOrDefault(x => x.Id == request.Parent);
+            tag.Parents = DB.GetTagsData().Where(x => request.Parents.Contains(x.Id)).ToArray();
 
-            await _repository.Update<Tag>(x => x.Id == id, tag);
+            await DB.Update<Tag>(x => x.Id == id, tag);
             return Ok();
         }
 
         [HttpDelete("{id:guid}")]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.NotFound)]
         public async Task<ActionResult> Delete(Guid id) {
-            var deletedTag = _repository
-                .GetTagsData()
-                .FirstOrDefault(x => x.Id == id);
-
+            var deletedTag = DB.GetTagsData().FirstOrDefault(x => x.Id == id);
             if (deletedTag == null)
                 return NotFound();
 
-            var childrenTags =_repository.GetTagsData().Where(x => x.Parent == deletedTag);
-            foreach (var child in childrenTags) {
-                child.Parent = deletedTag.Parent;
-                await _repository.Update<Tag>(x => x.Id == child.Id, child);
-            }
+            var childrenTags = DB.GetTagsData().Any(x => x.Parents.Contains(deletedTag));
+            var childrenBookmarks = DB.GetBookmarksData().Any(x => x.Tags.Contains(deletedTag));
+            if (childrenTags || childrenBookmarks)
+                return BadRequest();
 
-            var childrenBookmarks = _repository.GetBookmarksData().Where(x => x.Tags.Contains(deletedTag));
-            foreach (var child in childrenBookmarks) {
-                child.Tags.Remove(deletedTag);
-                child.Tags.Add(deletedTag.Parent);
-                await _repository.Update<Bookmark>(x => x.Id == child.Id, child);
-            }
-
-            await _repository.Delete<Tag>(x => x.Id == id);
+            await DB.Delete<Tag>(x => x.Id == id);
             return Ok();
         }
     }
