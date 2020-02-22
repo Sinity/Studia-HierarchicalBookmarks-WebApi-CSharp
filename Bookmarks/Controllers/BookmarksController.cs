@@ -17,7 +17,7 @@ namespace BookmarksApp.Controllers {
 
         [HttpGet]
         public ActionResult<ICollection<Bookmark>> Get() {
-            return DB.GetBookmarksData().ToArray();
+            return DB.GetBookmarksData().OrderByDescending(x => x.CreatedOn).ToArray();
         }
 
         [HttpGet("{id:guid}")]

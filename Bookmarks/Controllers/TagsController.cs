@@ -13,12 +13,12 @@ namespace BookmarksApp.Controllers {
 
         [HttpGet]
         public ActionResult<ICollection<string>> Get() {
-            return DB.GetBookmarksData().SelectMany(bookmark => bookmark.Tags).Distinct().ToList();
+            return DB.GetBookmarksData().SelectMany(bookmark => bookmark.Tags).Distinct().OrderBy(x => x).ToList();
         }
 
         [HttpGet("{name:alpha}")]
         public ActionResult<ICollection<Bookmark>> Get(string name) {
-            return DB.GetBookmarksData().Where(bookmark => bookmark.Tags.Contains(name)).ToList();
+            return DB.GetBookmarksData().Where(bookmark => bookmark.Tags.Contains(name)).OrderByDescending(x => x.CreatedOn).ToList();
         }
     }
 }
