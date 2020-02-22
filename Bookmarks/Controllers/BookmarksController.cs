@@ -1,12 +1,10 @@
 ﻿using BookmarksApp.Infrastructure;
 using BookmarksApp.Messages.Requests;
-using BookmarksApp.Messages.Responses;
 using BookmarksApp.Models;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 
 namespace BookmarksApp.Controllers {
@@ -18,7 +16,7 @@ namespace BookmarksApp.Controllers {
             DB = db;
 
         [HttpGet]
-        public ActionResult<ICollection<Bookmark>> Get([FromQuery] string tags, [FromQuery] string sort) {
+        public ActionResult<ICollection<Bookmark>> Get() {
             return DB.GetBookmarksData().ToArray();
         }
 
@@ -32,7 +30,7 @@ namespace BookmarksApp.Controllers {
                 Guid.NewGuid(),
                 bookmarkRequest.URL,
                 DateTime.Now,
-                DB.GetTagsData().Where(x => bookmarkRequest.Tags.Contains(x.Id)).ToArray()
+                bookmarkRequest.Tags
             );
 
             await DB.Insert(bookmark);
@@ -46,7 +44,7 @@ namespace BookmarksApp.Controllers {
                 return NotFound();
 
             bookmark.URL = bookmarkRequest.URL;
-            bookmark.Tags = DB.GetTagsData().Where(x => bookmarkRequest.Tags.Contains(x.Id)).ToArray();
+            bookmark.Tags = bookmarkRequest.Tags;
 
             await DB.Update(x => x.Id == id, bookmark);
             return Ok();

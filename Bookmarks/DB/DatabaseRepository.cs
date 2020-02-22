@@ -23,12 +23,6 @@ namespace BookmarksApp.Infrastructure {
                 x.SetIgnoreExtraElements(true);
                 x.MapIdMember(y => y.Id);
             });
-
-            BsonClassMap.RegisterClassMap<Models.Tag>(x => {
-                x.AutoMap();
-                x.SetIgnoreExtraElements(true);
-                x.MapIdMember(y => y.Id);
-            });
         }
 
         private IMongoCollection<T> GetCollection<T>() {
@@ -37,10 +31,6 @@ namespace BookmarksApp.Infrastructure {
 
         public IQueryable<BookmarksApp.Models.Bookmark> GetBookmarksData() {
             return GetCollection<BookmarksApp.Models.Bookmark>().AsQueryable();
-        }
-
-        public IQueryable<BookmarksApp.Models.Tag> GetTagsData() {
-            return GetCollection<BookmarksApp.Models.Tag>().AsQueryable();
         }
 
         public async Task Insert<T>(T value) {
